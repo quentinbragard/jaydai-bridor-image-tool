@@ -207,8 +207,12 @@
                 
                 <!-- Image Display -->
                 <div id="imageDisplay" class="rounded-lg">
+                    <div id="loadingIndicator" class="hidden flex flex-col items-center gap-3 py-10">
+                        <div class="spinner"></div>
+                        <p class="text-gray-600 text-sm font-medium">Generating image...</p>
+                    </div>
                     <p id="initialMessage" class="text-gray-500 text-center p-4">Enter parameters and click "Generate" to visualize your staged product.</p>
-                    <div id="loadingIndicator" class="hidden spinner"></div>
+                    <div id="imageContainer" class="w-full"></div>
                 </div>
                 <div id="errorMessage" class="text-red-600 mt-4 hidden p-2 bg-red-100 rounded"></div>
                 
@@ -324,7 +328,7 @@
         const backgroundSelect = document.getElementById('background');
         const generateBtn = document.getElementById('generateBtn');
         const downloadBtn = document.getElementById('downloadBtn'); 
-        const imageDisplay = document.getElementById('imageDisplay');
+        const imageContainer = document.getElementById('imageContainer');
         const loadingIndicator = document.getElementById('loadingIndicator');
         const errorMessageDiv = document.getElementById('errorMessage');
         const initialMessage = document.getElementById('initialMessage');
@@ -347,9 +351,9 @@
 
             // UI preparation
             displayError(""); 
-            imageDisplay.innerHTML = ''; 
-            loadingIndicator.classList.remove('hidden');
             initialMessage.classList.add('hidden');
+            imageContainer.innerHTML = '';
+            loadingIndicator.classList.remove('hidden');
             generateBtn.disabled = true;
             downloadBtn.disabled = true; 
             generateBtn.textContent = "Generating...";
@@ -365,15 +369,16 @@
                 img.src = imageUrl;
                 img.alt = `Professional photo of ${product}`;
                 img.onload = () => {
-                    imageDisplay.innerHTML = '';
-                    imageDisplay.appendChild(img);
+                    imageContainer.innerHTML = '';
+                    imageContainer.appendChild(img);
                     // Store URL for download and enable the button
                     downloadBtn.dataset.imageUrl = imageUrl;
                     downloadBtn.disabled = false;
                 };
                 img.onerror = () => {
                     displayError("Error loading generated image.");
-                    imageDisplay.innerHTML = '';
+                    imageContainer.innerHTML = '';
+                    initialMessage.classList.remove('hidden');
                     downloadBtn.disabled = true;
                 };
                 
@@ -381,6 +386,7 @@
                 console.error("Critical API Error:", error);
                 displayError(`Image generation failed: ${error.message}`);
                 initialMessage.classList.remove('hidden');
+                imageContainer.innerHTML = '';
                 downloadBtn.disabled = true;
             } finally {
                 loadingIndicator.classList.add('hidden');
@@ -416,10 +422,6 @@
                 errorMessageDiv.textContent = "";
             }
         }
-
-        // Initial setup of the display area
-        imageDisplay.appendChild(loadingIndicator);
-        imageDisplay.appendChild(initialMessage);
 
     </script>
 </body>
