@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BRIDOR Photo Studio (Scene Generator)</title>
+    <link rel="icon" href="public/favicon.ico" type="image/x-icon">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        :root {
+            --color-gold-accent: #D4AF37; /* Metallic Gold/Amber for accents and logo wheat color */
+            --color-primary: #1F2937; /* Dark Grey/Black for main buttons, premium look */
+            --color-secondary: #FCD34D; /* Soft Gold Accent */
+            --color-download: #10B981; /* Emerald Green (Download) */
+            --color-background: #F4F4F4; /* Lighter background */
+            --color-card: #FFFFFF;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--color-background);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+        .main-wrapper {
+            width: 100%;
+            max-width: 900px;
+        }
+        .main-content-grid {
+            display: grid;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+        @media (min-width: 768px) {
+            .main-content-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        .header-logo {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        /* Removed .header-logo img style */
+        .card {
+            background-color: var(--color-card);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        h1 {
+            /* Use gold accent for the separator */
+            border-bottom: 2px solid var(--color-gold-accent); 
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+            font-weight: 700;
+        }
+        label {
+            display: block;
+            margin-top: 1rem;
+            margin-bottom: 0.25rem;
+            font-weight: 600;
+            color: #333;
+        }
+        select, input[type="text"], input[type="file"], button {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #D1D5DB;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+        select:focus, input[type="text"]:focus, input[type="file"]:focus {
+            border-color: var(--color-gold-accent); /* Focus color changed to gold */
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.3);
+            outline: none;
+        }
+        #generateBtn {
+            background-color: var(--color-primary);
+            color: var(--color-gold-accent); /* Gold text on dark background */
+            font-weight: 700;
+            margin-top: 1.5rem;
+        }
+        #generateBtn:hover {
+            background-color: #374151; /* Slightly lighter dark grey */
+            color: var(--color-secondary);
+        }
+        #downloadBtn {
+            background-color: var(--color-download);
+            color: white; /* Ensure text is white */
+        }
+        #downloadBtn:hover:not(:disabled) {
+            background-color: #059669; 
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        #imageDisplay {
+            min-height: 300px;
+            background-color: #E5E7EB;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        #imageDisplay img {
+            width: 100%;
+            height: auto;
+            max-height: 100%;
+            object-fit: cover;
+            border-radius: 0.5rem;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.3);
+            border-top: 4px solid var(--color-gold-accent); /* Spinner color changed to gold */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-wrapper">
+        <!-- Logo and Branding Header -->
+        <div class="header-logo">
+            <div class="flex items-center justify-center gap-3 sm:gap-8 md:gap-10 mb-4">
+                <img src="public/jaydai_logo.png" alt="Jaydai" class="h-16 sm:h-24 md:h-32 w-auto object-contain drop-shadow-lg">
+                <span class="text-4xl sm:text-6xl md:text-8xl lg:text-9xl text-indigo-200 font-light">×</span>
+                <img src="public/bridor_logo.png" alt="Bridor" class="h-14 sm:h-20 md:h-28 w-auto object-contain drop-shadow-lg">
+            </div>
+            <span class="sr-only">Jaydai × Bridor</span>
+            <h2 class="text-3xl md:text-4xl font-extrabold text-gray-800">Photo Studio</h2>
+            <p class="text-gray-500 mt-1 md:text-lg">Professional Scene Generator</p>
+        </div>
+
+        <div class="main-content-grid">
+            <!-- Control Column -->
+            <div class="card md:col-span-1">
+                <h1 class="text-2xl text-gray-800">Scene Settings</h1>
+
+                <form id="generationForm">
+                    <p class="text-sm text-gray-600 mb-4">You can either describe your product, upload its photo, or both.</p>
+
+                    <label for="productName">Product Name (Ex: Butter Croissant)</label>
+                    <input type="text" id="productName" placeholder="Enter product name..." class="text-gray-700">
+
+                    <label for="productImageFile" class="mt-4">Upload Product Photo (Optional)</label>
+                    <input type="file" id="productImageFile" accept="image/png, image/jpeg" class="text-gray-700">
+
+                    <!-- SURFACE OPTIONS -->
+                    <label for="surface">Surface / Countertop</label>
+                    <select id="surface" class="text-gray-700">
+                        <option value="Carrara marble countertop">Elegant Carrara Marble</option>
+                        <option value="dark walnut wood slab">Dark Walnut Wood Slab</option>
+                        <option value="textured raw slate">Textured Raw Slate</option>
+                        <option value="white fine linen tablecloth">Refined White Fine Linen Tablecloth</option>
+                        <option value="polished stainless steel counter">Polished Stainless Steel / Zinc Counter</option>
+                    </select>
+
+                    <!-- COMPOSITION VARIABLE -->
+                    <label for="composition">Scene Elements / Composition</label>
+                    <select id="composition" class="text-gray-700">
+                        <option value="simple, solitary composition">Simple and Solitary (Product in majesty)</option>
+                        <option value="scattered flour dust and mixing tools, artisan context">Scattered flour dust and mixing tools, artisan context</option>
+                        <option value="coffee beans and a simple espresso cup">Coffee beans and a simple espresso cup</option>
+                        <option value="fresh butter and whole ingredients">Fresh butter and whole ingredients</option>
+                        <option value="minimalist setup with a single glass of water">Minimalist setup with a single glass of water</option>
+                        <option value="glass of red wine filled with wine and aged cheese board, gourmet setting">Glass of red wine filled with wine and aged cheese board, gourmet setting</option>
+                        <option value="porcelain dishes and fresh fruit composition">Porcelain dishes and fresh fruit composition</option>
+                    </select>
+
+                    <!-- LIGHTING OPTIONS -->
+                    <label for="lighting">Lighting</label>
+                    <select id="lighting" class="text-gray-700">
+                        <option value="soft atelier window light">Soft and Directional Atelier (Window) Light</option>
+                        <option value="golden hour dawn backlight">Golden Hour Dawn Backlight / Warm Light</option>
+                        <option value="high-key bright studio lighting">High-Key Bright Studio Lighting</option>
+                        <option value="dramatic chiaroscuro low-key lighting">Dramatic Chiaroscuro Low-Key Lighting</option>
+                    </select>
+
+                    <!-- BACKGROUND OPTIONS -->
+                    <label for="background">Background</label>
+                    <select id="background" class="text-gray-700">
+                        <option value="out-of-focus bokeh artisanal bakery setting">Artistic Bokeh of an Artisanal Bakery</option>
+                        <option value="deep black and minimalist backdrop">Deep Black and Minimalist Backdrop</option>
+                        <option value="aged plaster wall texture">Aged Plaster Wall Texture</option>
+                        <option value="soft warm grey studio backdrop">Soft Warm Grey Studio Backdrop</option>
+                        <option value="out-of-focus elegant Parisian restaurant">Out-of-focus elegant Parisian restaurant</option>
+                        <option value="traditional brick and wood bakery shop background">Traditional brick and wood bakery shop background</option>
+                    </select>
+
+                    <button type="submit" id="generateBtn">Generate Professional Photo ✨</button>
+                </form>
+            </div>
+
+            <!-- Image Display Column -->
+            <div class="card md:col-span-1">
+                <h1 class="text-2xl text-gray-800">Generation Result</h1>
+                
+                <!-- Image Display -->
+                <div id="imageDisplay" class="rounded-lg">
+                    <p id="initialMessage" class="text-gray-500 text-center p-4">Enter parameters and click "Generate" to visualize your staged product.</p>
+                    <div id="loadingIndicator" class="hidden spinner"></div>
+                </div>
+                <div id="errorMessage" class="text-red-600 mt-4 hidden p-2 bg-red-100 rounded"></div>
+                
+                <!-- DOWNLOAD BUTTON -->
+                <button type="button" id="downloadBtn" class="font-bold py-2 px-4 rounded transition duration-150 ease-in-out w-full disabled:opacity-50 mt-4" disabled>
+                    Download Image ⬇️
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Global variables (leave empty for the demo)
+        const apiKey = ""; 
+        
+        // --- Configuration and Utilities for the Gemini API (Image Generation) ---
+
+        /**
+         * Converts a File object to a Base64 string for the API.
+         */
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                if (!file) {
+                    return resolve(null);
+                }
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]); 
+                reader.onerror = error => reject(error);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        /**
+         * Triggers the download of an image from a data URL (base64).
+         */
+        function downloadImage(dataUrl, filename) {
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        /**
+         * Builds the English prompt for the AI (Image).
+         */
+        function buildPrompt(product, surface, composition, lighting, background, isImageProvided) {
+            const productDescription = product || "product image";
+            
+            // Base instruction geared towards high-end French luxury
+            const basePrompt = isImageProvided
+                ? `Redress the main subject in the provided image (a ${productDescription}) as a high-end French luxury food photography item. Maintain the core form of the product.` 
+                : `Professional French luxury studio food photography for a high-end catalog. Ultra-detailed, centered, and perfectly plated shot of a "${productDescription}".`;
+
+            // Style constraints including composition
+            const styleConstraints = `Staged on a ${surface} surface. Composition includes: ${composition}. The lighting is ${lighting}. The background is ${background}. Sober and elegant composition, minimalist styling. No people, no hands, no text, no distracting elements. Commercial catalog quality, high resolution, 8k, photorealistic.`;
+            
+            return `${basePrompt} ${styleConstraints}`;
+        }
+
+        /**
+         * Makes the image generation API call (gemini-2.5-flash-image-preview) with exponential backoff.
+         */
+        async function generateImageWithRetry(userPrompt, base64Image, maxRetries = 5, delay = 1000) {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
+            
+            const contentParts = [];
+            
+            if (base64Image) {
+                const mimeType = document.getElementById('productImageFile').files[0]?.type || 'image/jpeg';
+                contentParts.push({
+                    inlineData: {
+                        mimeType: mimeType,
+                        data: base64Image 
+                    }
+                });
+            }
+
+            contentParts.push({ text: userPrompt });
+
+            const payload = {
+                contents: [{ parts: contentParts }],
+                generationConfig: {
+                    responseModalities: ['TEXT', 'IMAGE']
+                },
+            };
+
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(`HTTP error! Status: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+                    }
+
+                    const result = await response.json();
+                    
+                    const base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+                    if (base64Data) {
+                        return `data:image/png;base64,${base64Data}`;
+                    } else {
+                        const textError = result?.candidates?.[0]?.content?.parts?.find(p => p.text)?.text;
+                        throw new Error(textError || "API did not return valid image data.");
+                    }
+
+                } catch (error) {
+                    console.error(`Attempt ${i + 1} failed (Image):`, error.message);
+                    if (i === maxRetries - 1) {
+                        throw new Error(`Image generation failed after ${maxRetries} attempts. ${error.message}`);
+                    }
+                    const sleepTime = delay * Math.pow(2, i);
+                    await new Promise(resolve => setTimeout(resolve, sleepTime));
+                }
+            }
+        }
+
+        // --- User Interface Logic ---
+
+        const form = document.getElementById('generationForm');
+        const productNameInput = document.getElementById('productName');
+        const productImageFile = document.getElementById('productImageFile');
+        const surfaceSelect = document.getElementById('surface');
+        const compositionSelect = document.getElementById('composition'); 
+        const lightingSelect = document.getElementById('lighting');
+        const backgroundSelect = document.getElementById('background');
+        const generateBtn = document.getElementById('generateBtn');
+        const downloadBtn = document.getElementById('downloadBtn'); 
+        const imageDisplay = document.getElementById('imageDisplay');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const errorMessageDiv = document.getElementById('errorMessage');
+        const initialMessage = document.getElementById('initialMessage');
+
+        // --- Image Generation Handler ---
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const product = productNameInput.value.trim();
+            const file = productImageFile.files[0];
+            const surface = surfaceSelect.value;
+            const composition = compositionSelect.value;
+            const lighting = lightingSelect.value;
+            const background = backgroundSelect.value;
+
+            if (!product && !file) {
+                displayError("Please enter the product name OR upload an image.");
+                return;
+            }
+
+            // UI preparation
+            displayError(""); 
+            imageDisplay.innerHTML = ''; 
+            loadingIndicator.classList.remove('hidden');
+            initialMessage.classList.add('hidden');
+            generateBtn.disabled = true;
+            downloadBtn.disabled = true; 
+            generateBtn.textContent = "Generating...";
+
+            try {
+                const base64Image = await fileToBase64(file);
+                const prompt = buildPrompt(product, surface, composition, lighting, background, !!file); 
+                console.log("Generated Prompt (EN):", prompt);
+                
+                const imageUrl = await generateImageWithRetry(prompt, base64Image);
+                
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.alt = `Professional photo of ${product}`;
+                img.onload = () => {
+                    imageDisplay.innerHTML = '';
+                    imageDisplay.appendChild(img);
+                    // Store URL for download and enable the button
+                    downloadBtn.dataset.imageUrl = imageUrl;
+                    downloadBtn.disabled = false;
+                };
+                img.onerror = () => {
+                    displayError("Error loading generated image.");
+                    imageDisplay.innerHTML = '';
+                    downloadBtn.disabled = true;
+                };
+                
+            } catch (error) {
+                console.error("Critical API Error:", error);
+                displayError(`Image generation failed: ${error.message}`);
+                initialMessage.classList.remove('hidden');
+                downloadBtn.disabled = true;
+            } finally {
+                loadingIndicator.classList.add('hidden');
+                generateBtn.disabled = false;
+                generateBtn.textContent = "Generate Professional Photo ✨";
+            }
+        });
+
+        // --- Download Handler ---
+        downloadBtn.addEventListener('click', () => {
+            const imageUrl = downloadBtn.dataset.imageUrl;
+            const product = productNameInput.value.trim();
+            
+            if (imageUrl) {
+                // Create a clean filename
+                const safeProductName = product ? product.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'bridor_product';
+                const filename = `${safeProductName}_scene.png`;
+                downloadImage(imageUrl, filename);
+            } else {
+                displayError("No image available to download. Please generate one first.");
+            }
+        });
+
+        /**
+         * Displays or hides an error message.
+         */
+        function displayError(message) {
+            if (message) {
+                errorMessageDiv.textContent = message;
+                errorMessageDiv.classList.remove('hidden');
+            } else {
+                errorMessageDiv.classList.add('hidden');
+                errorMessageDiv.textContent = "";
+            }
+        }
+
+        // Initial setup of the display area
+        imageDisplay.appendChild(loadingIndicator);
+        imageDisplay.appendChild(initialMessage);
+
+    </script>
+</body>
+</html>
