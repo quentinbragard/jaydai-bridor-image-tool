@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BRIDOR Photo Studio (Scene Generator)</title>
-    <link rel="icon" href="public/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="./favicon.ico" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
@@ -132,9 +132,9 @@
         <!-- Logo and Branding Header -->
         <div class="header-logo">
             <div class="flex items-center justify-center gap-3 sm:gap-8 md:gap-10 mb-4">
-                <img src="public/jaydai_logo.png" alt="Jaydai" class="h-16 sm:h-24 md:h-32 w-auto object-contain drop-shadow-lg">
+                <img src="./jaydai_logo.png" alt="Jaydai" class="h-16 sm:h-24 md:h-32 w-auto object-contain drop-shadow-lg">
                 <span class="text-4xl sm:text-6xl md:text-8xl lg:text-9xl text-indigo-200 font-light">×</span>
-                <img src="public/bridor_logo.png" alt="Bridor" class="h-14 sm:h-20 md:h-28 w-auto object-contain drop-shadow-lg">
+                <img src="./bridor_logo.png" alt="Bridor" class="h-14 sm:h-20 md:h-28 w-auto object-contain drop-shadow-lg">
             </div>
             <span class="sr-only">Jaydai × Bridor</span>
             <h2 class="text-3xl md:text-4xl font-extrabold text-gray-800">Photo Studio</h2>
@@ -221,9 +221,6 @@
     </div>
 
     <script type="module">
-        // Global variables (leave empty for the demo)
-        const apiKey = ""; 
-        
         // --- Configuration and Utilities for the Gemini API (Image Generation) ---
 
         /**
@@ -235,7 +232,14 @@
                     return resolve(null);
                 }
                 const reader = new FileReader();
-                reader.onload = () => resolve(reader.result.split(',')[1]); 
+                reader.onload = () => {
+                    const result = reader.result;
+                    const base64Data = typeof result === 'string' ? result.split(',')[1] : '';
+                    resolve({
+                        base64: base64Data,
+                        mimeType: file.type || 'image/jpeg'
+                    });
+                };
                 reader.onerror = error => reject(error);
                 reader.readAsDataURL(file);
             });
@@ -273,52 +277,30 @@
         /**
          * Makes the image generation API call (gemini-2.5-flash-image-preview) with exponential backoff.
          */
-        async function generateImageWithRetry(userPrompt, base64Image, maxRetries = 5, delay = 1000) {
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
-            
-            const contentParts = [];
-            
-            if (base64Image) {
-                const mimeType = document.getElementById('productImageFile').files[0]?.type || 'image/jpeg';
-                contentParts.push({
-                    inlineData: {
-                        mimeType: mimeType,
-                        data: base64Image 
-                    }
-                });
-            }
-
-            contentParts.push({ text: userPrompt });
-
-            const payload = {
-                contents: [{ parts: contentParts }],
-                generationConfig: {
-                    responseModalities: ['TEXT', 'IMAGE']
-                },
-            };
-
+        async function generateImageWithRetry(userPrompt, imagePayload, maxRetries = 5, delay = 1000) {
             for (let i = 0; i < maxRetries; i++) {
                 try {
-                    const response = await fetch(apiUrl, {
+                    const response = await fetch('/api/generate-image', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
+                        body: JSON.stringify({
+                            prompt: userPrompt,
+                            base64Image: imagePayload?.base64 || null,
+                            mimeType: imagePayload?.mimeType
+                        })
                     });
 
+                    const result = await response.json().catch(() => ({}));
+
                     if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(`HTTP error! Status: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+                        throw new Error(result?.error || `HTTP error! Status: ${response.status}`);
                     }
 
-                    const result = await response.json();
-                    
-                    const base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
-                    if (base64Data) {
-                        return `data:image/png;base64,${base64Data}`;
-                    } else {
-                        const textError = result?.candidates?.[0]?.content?.parts?.find(p => p.text)?.text;
-                        throw new Error(textError || "API did not return valid image data.");
+                    if (result?.imageUrl) {
+                        return result.imageUrl;
                     }
+
+                    throw new Error(result?.error || "API did not return valid image data.");
 
                 } catch (error) {
                     console.error(`Attempt ${i + 1} failed (Image):`, error.message);
@@ -373,11 +355,11 @@
             generateBtn.textContent = "Generating...";
 
             try {
-                const base64Image = await fileToBase64(file);
+                const imagePayload = await fileToBase64(file);
                 const prompt = buildPrompt(product, surface, composition, lighting, background, !!file); 
                 console.log("Generated Prompt (EN):", prompt);
                 
-                const imageUrl = await generateImageWithRetry(prompt, base64Image);
+                const imageUrl = await generateImageWithRetry(prompt, imagePayload);
                 
                 const img = document.createElement('img');
                 img.src = imageUrl;
