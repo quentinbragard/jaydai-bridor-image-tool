@@ -1,4 +1,11 @@
 module.exports = async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).json({ error: 'Method Not Allowed' });
@@ -10,14 +17,33 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: 'Missing GEMINI_API_KEY environment variable.' });
   }
 
-  let body = req.body;
+  const body = await new Promise((resolve, reject) => {
+    let raw = '';
+    req.on('data', chunk => {
+      raw += chunk;
+      if (raw.length > 10 * 1024 * 1024) {
+        reject(new Error('Payload too large.'));
+        req.destroy();
+      }
+    });
+    req.on('end', () => {
+      if (!raw) {
+        resolve({});
+        return;
+      }
+      try {
+        resolve(JSON.parse(raw));
+      } catch (error) {
+        reject(new Error('Invalid JSON payload.'));
+      }
+    });
+    req.on('error', reject);
+  }).catch(error => {
+    res.status(400).json({ error: error.message });
+  });
 
-  if (!body || typeof body === 'string') {
-    try {
-      body = body ? JSON.parse(body) : {};
-    } catch (error) {
-      return res.status(400).json({ error: 'Invalid JSON payload.' });
-    }
+  if (!body) {
+    return;
   }
 
   const { prompt, base64Image, mimeType } = body;
@@ -48,10 +74,13 @@ module.exports = async (req, res) => {
 
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`,
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': apiKey
+        },
         body: JSON.stringify(payload)
       }
     );
